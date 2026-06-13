@@ -1,0 +1,29 @@
+[package]
+name = "tinyai-engine"
+version = "0.1.0"
+edition = "2021"
+description = "TinyAI - 超轻量自研 GPT 推理引擎，4-bit 量化，无需 Git LFS"
+authors = ["FishLab-ai"]
+license = "MIT"
+
+[dependencies]
+# Web 框架
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
+tower-http = { version = "0.5", features = ["cors"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# 随机数
+rand = "0.8"
+
+# 日志
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+codegen-units = 1
