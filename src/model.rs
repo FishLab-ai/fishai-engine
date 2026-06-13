@@ -95,7 +95,7 @@ impl ModelConfig {
     }
 
     /// 混合精度量化后的模型大小
-    /// 策略: Embed/LM Head/Norm -> FP16, 其余 -> INT4
+    /// 策略: Embed/Norm -> FP16, Q/K -> INT8, V/O/FFN -> INT4
     pub fn quantized_size_mb(&self) -> f64 {
         let d = self.d_model;
         let v = self.vocab_size;
@@ -104,27 +104,25 @@ impl ModelConfig {
         let nkv = self.n_kv_heads;
         let hd = self.head_dim();
 
-        // FP16 部分: Token Embed + Final RMSNorm + (如果不绑定则 LM Head 也 FP16)
-        let fp16_params = v * d + d + if self.weight_tying { 0 } else { v * d };
+        // FP16 部分 (2 bytes/param)
+        let fp16_params = v * d       // Token Embedding
+            + d                        // Final RMSNorm gamma
+            + 2 * d * self.n_layers;   // Per-layer RMSNorm gammas (2 per layer)
 
-        // INT4 部分: 所有 Transformer 层的权重
-        let mut int4_params = 0usize;
-        int4_params += d * (nh * hd);      // Wq
-        int4_params += d * (nkv * hd);     // Wk
-        int4_params += d * (nkv * hd);     // Wv
-        int4_params += d * d;               // Wo
-        int4_params += d * ff;              // W_gate
-        int4_params += d * ff;              // W_up
-        int4_params += ff * d;              // W_down
-        // Layer RMSNorm gamma 也用 FP16
-        let fp16_per_layer = 2 * d;
-        let int4_per_layer = int4_params - fp16_per_layer;
+        // INT8 部分 (1 byte/param): Q/K 投影 (注意力精度敏感)
+        let int8_per_layer = d * (nh * hd)      // Wq
+            + d * (nkv * hd);                     // Wk
+        let total_int8 = int8_per_layer * self.n_layers;
 
-        let total_fp16 = fp16_params + fp16_per_layer * self.n_layers;
+        // INT4 部分 (0.5 bytes/param): V/O 投影 + FFN
+        let int4_per_layer = d * (nkv * hd)      // Wv
+            + d * d                                // Wo
+            + d * ff                               // W_gate
+            + d * ff                               // W_up
+            + ff * d;                              // W_down
         let total_int4 = int4_per_layer * self.n_layers;
 
-        // FP16: 2 bytes/param, INT4: 0.5 bytes/param
-        let bytes = total_fp16 as f64 * 2.0 + total_int4 as f64 * 0.5;
+        let bytes = fp16_params as f64 * 2.0 + total_int8 as f64 * 1.0 + total_int4 as f64 * 0.5;
         bytes / (1024.0 * 1024.0)
     }
 }
@@ -635,8 +633,8 @@ mod tests {
         println!("FishAI v2 — d_ff = {} (8/3 * d_model ratio)", config.d_ff);
         // Weight tying 应大幅减少参数量
         assert!(params > 0);
-        // 量化后应该很小
-        assert!(size_mb < 30.0);
+        // 混合精度量化后应该在合理范围
+        assert!(size_mb < 50.0);
     }
 
     #[test]
