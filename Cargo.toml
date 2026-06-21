@@ -1,0 +1,36 @@
+[package]
+name = "fishai-engine"
+version = "0.2.0"
+edition = "2021"
+description = "FishAI Engine — FishLab-ai 自研 AI 引擎核心逻辑 (Rust)"
+license = "MIT"
+authors = ["FishLab-ai"]
+
+[lib]
+name = "fishai_engine"
+path = "src/lib.rs"
+
+[[bin]]
+name = "fishai-engine"
+path = "src/main.rs"
+
+[dependencies]
+# HTTP 服务
+axum = { version = "0.8", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# 随机数 / 数学
+rand = "0.9"
+
+# 日志
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+criterion = "0.6"
+
+
