@@ -1,8 +1,8 @@
 [package]
 name = "fishai-engine"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
-description = "FishAI Engine — FishLab-ai 自研 AI 引擎核心逻辑 (Rust)"
+description = "FishAI Engine — FishLab-ai 自研 AI 引擎 (Rust, 从 token 概率到完整推理管线)"
 license = "MIT"
 authors = ["FishLab-ai"]
 
@@ -25,12 +25,30 @@ serde_json = "1"
 
 # 随机数 / 数学
 rand = "0.9"
+num-traits = "0.2"
+
+# 底层 AI 管线
+byteorder = "1"
+half = { version = "2", features = ["std"] }
+memmap2 = "0.9"
+bytemuck = "1"
+
+# 并行计算
+rayon = "1.10"
+
+# 正则（tokenizer 用）
+regex = "1"
 
 # 日志
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
+# base64 (tokenizer special tokens)
+base64 = "0.22"
+
 [dev-dependencies]
 criterion = "0.6"
 
-
+# [[bench]]
+# name = "sampling_bench"
+# harness = false
